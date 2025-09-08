@@ -19,9 +19,19 @@ def get_portfolio_stats(p_df, period="5y"):
 
     tickers_sa = [t + '.SA' for t in p_df['Ativo'].tolist()]
     
-    hist_data = yf.download(tickers_sa, period=period, auto_adjust=True, progress=False)['Close']
+    # Adicionando tratamento para caso de apenas um ticker
+    if len(tickers_sa) == 1:
+        hist_data = yf.download(tickers_sa, period=period, auto_adjust=True, progress=False)
+    else:
+        hist_data = yf.download(tickers_sa, period=period, auto_adjust=True, progress=False)['Close']
+
     if hist_data.empty:
         return 0, 0, 0, 0
+    
+    # Tratando o caso de um ticker (retorna um DataFrame diferente)
+    if len(tickers_sa) == 1:
+        hist_data = hist_data[['Close']].rename(columns={'Close': tickers_sa[0]})
+
     latest_prices = hist_data.iloc[-1]
     
     p_df['Preco Atual'] = p_df['Ativo'].apply(lambda x: latest_prices.get(x + '.SA'))
@@ -30,18 +40,24 @@ def get_portfolio_stats(p_df, period="5y"):
     
     initial_value = p_df['Valor Atual'].sum()
     if initial_value == 0: return 0, 0, 0, 0
+    
     p_df['Peso'] = p_df['Valor Atual'] / initial_value
     weights = p_df['Valor Atual'] / initial_value
     weights.index = p_df['Ativo'] + '.SA'
     
+    # Garantindo alinhamento entre pesos e retornos
     daily_returns = hist_data.pct_change().dropna()
-    portfolio_daily_returns = (daily_returns * weights).sum(axis=1)
+    common_tickers = daily_returns.columns.intersection(weights.index)
+    
+    portfolio_daily_returns = (daily_returns[common_tickers] * weights[common_tickers]).sum(axis=1)
     
     drift = portfolio_daily_returns.mean()
     volatility = portfolio_daily_returns.std()
     
     total_yield = 0
-    for ticker_sa in tickers_sa:
+    # Usar apenas tickers válidos para buscar dividendos
+    valid_tickers_sa = [t + '.SA' for t in p_df['Ativo'].tolist()]
+    for ticker_sa in valid_tickers_sa:
         try:
             info = yf.Ticker(ticker_sa).info
             dy = info.get('dividendYield', 0) or 0
@@ -49,39 +65,46 @@ def get_portfolio_stats(p_df, period="5y"):
             ativo = ticker_sa.replace('.SA', '')
             peso_ativo = p_df.loc[p_df['Ativo'] == ativo, 'Peso'].iloc[0]
             total_yield += dy * peso_ativo
-        except (KeyError, IndexError):
+        except (KeyError, IndexError, AttributeError):
             continue
 
     return initial_value, drift, volatility, total_yield
 
-# --- FUNÇÃO DE SIMULAÇÃO MODIFICADA ---
+# --- FUNÇÃO DE SIMULAÇÃO (CORREÇÃO FINAL CONTRA DUPLO CÔMPUTO DE DIVIDENDOS) ---
 def run_monte_carlo_simulation(initial_value, drift, volatility, dividend_yield, years, monthly_contribution, num_simulations, reinvest_dividends=True):
     num_days = years * 252
-    
     all_paths = np.zeros((num_days + 1, num_simulations))
     all_paths[0] = initial_value
-    
     accumulated_dividends = np.zeros((num_days + 1, num_simulations))
+    
+    # --- CORREÇÃO PRINCIPAL ---
+    # O 'drift' calculado a partir de dados ajustados é o RETORNO TOTAL (preço + dividendo).
+    # Precisamos isolar o drift que vem apenas da variação de preço.
+    # Para isso, subtraímos a componente diária aproximada do dividendo.
+    daily_dividend_component = dividend_yield / 252
+    price_drift = drift - daily_dividend_component
+    
+    # A correção de Itō se aplica à volatilidade do preço, então usamos o price_drift.
+    adjusted_price_drift = price_drift - 0.5 * volatility**2
     
     for i in range(num_simulations):
         current_value = initial_value
         current_dividends = 0
-        
         for day in range(1, num_days + 1):
             random_shock = np.random.normal(0, 1)
-            daily_return = drift + volatility * random_shock
-            current_value *= (1 + daily_return)
             
-            if day % 21 == 0:
-                # Calcula os dividendos do mês ANTES de adicionar o aporte
+            # A valorização diária agora usa APENAS o drift de preço.
+            price_daily_return = adjusted_price_drift + volatility * random_shock
+            current_value *= (1 + price_daily_return)
+            
+            # Aporte e pagamento de dividendos explícito mensalmente
+            if day > 0 and day % 21 == 0:
                 monthly_dividend_return = (1 + dividend_yield)**(1/12) - 1
                 dividends_this_month = current_value * monthly_dividend_return
                 current_dividends += dividends_this_month
                 
-                # Adiciona aporte
                 current_value += monthly_contribution
                 
-                # Reinveste se a opção estiver marcada
                 if reinvest_dividends:
                     current_value += dividends_this_month
             
@@ -90,7 +113,7 @@ def run_monte_carlo_simulation(initial_value, drift, volatility, dividend_yield,
             
     return all_paths, accumulated_dividends
 
-# --- Interface do Usuário ---
+# --- Interface do Usuário (sem alterações) ---
 portfolio_df = load_portfolio()
 
 if portfolio_df.empty:
@@ -118,7 +141,7 @@ if st.sidebar.button("Rodar Simulação de Monte Carlo"):
                 fiis_df = portfolio_df[portfolio_df['Ativo'].str.endswith('11')]
                 if not fiis_df.empty:
                     st.write("**FIIs na Carteira:**")
-                    st.dataframe(fiis_df[['Ativo', 'Quantidade']], hide_index=True)
+                    st.dataframe(fiis_df[['Ativo', 'Quantidade']], hide_index=True, use_container_width=True)
                 else:
                     st.info("Nenhum Fundo Imobiliário (FII) encontrado na sua carteira.")
             st.divider()
@@ -147,7 +170,6 @@ if st.sidebar.button("Rodar Simulação de Monte Carlo"):
 
             st.subheader("Projeção de Renda Passiva (Dividendos)")
             
-            # Calcula a média dos dividendos totais recebidos em todas as simulações
             avg_total_dividends = np.mean(final_dividends)
             avg_annual_dividends = avg_total_dividends / projection_years_option
             avg_monthly_dividends = avg_annual_dividends / 12
@@ -158,14 +180,14 @@ if st.sidebar.button("Rodar Simulação de Monte Carlo"):
             with col_div2:
                 st.metric("Média Anual de Dividendos", f"R$ {avg_annual_dividends:,.2f}", help="A média de dividendos que você receberia por ano.")
             with col_div3:
-                st.metric("Média Mensal de Dividendos", f"R$ {avg_monthly_dividends:,.2f}", help="A renda passiva mensal média projetada.")
+                st.metric("Média Mensal de Dividendos", f"R$ {avg_monthly_dividends:,.2f}", help="A renda passiva mensal média projetada ao longo do período.")
 
             fig_hist = go.Figure(data=[go.Histogram(x=final_results, nbinsx=100, name="Distribuição")])
             fig_hist.add_vline(x=p10, line_width=2, line_dash="dash", line_color="red", annotation_text="P10")
             fig_hist.add_vline(x=p50, line_width=3, line_dash="dash", line_color="yellow", annotation_text="Mediana P50")
             fig_hist.add_vline(x=p90, line_width=2, line_dash="dash", line_color="green", annotation_text="P90")
             fig_hist.update_layout(title_text=f'Distribuição dos Resultados Finais Após {projection_years_option} Anos',
-                                 xaxis_title='Patrimônio Final Projetado (R$)', yaxis_title='Frequência')
+                                   xaxis_title='Patrimônio Final Projetado (R$)', yaxis_title='Frequência')
             st.plotly_chart(fig_hist, use_container_width=True)
 
             st.divider()
@@ -175,7 +197,7 @@ if st.sidebar.button("Rodar Simulação de Monte Carlo"):
             p50_path = np.percentile(simulation_paths, 50, axis=1)
             p90_path = np.percentile(simulation_paths, 90, axis=1)
             
-            time_axis = list(range(projection_years_option * 252 + 1))
+            time_axis = np.arange(projection_years_option * 252 + 1)
 
             fig_paths = go.Figure()
             fig_paths.add_trace(go.Scatter(x=time_axis, y=p10_path, fill=None, mode='lines', line_color='rgba(255,0,0,0.2)', name='P10'))

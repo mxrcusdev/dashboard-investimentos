@@ -1,0 +1,15 @@
+# Created by venv; see https://docs.python.org/3/library/venv.html
+# Ambiente Virtual
+.venv/
+venv/
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Dados Pessoais
+portfolio.csv
+
+# Boa Prática
+.DS_Store
+.vscode/
