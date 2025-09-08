@@ -1,15 +1,22 @@
-# Created by venv; see https://docs.python.org/3/library/venv.html
-# Ambiente Virtual
+# Ambiente Virtual do Python
 .venv/
 venv/
+Lib/
+Include/
+Scripts/
+pyvenv.cfg
 
-# Cache do Python
+# Arquivos de Cache do Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Dados Pessoais
-portfolio.csv
-
-# Boa Prática
-.DS_Store
+# Arquivos de configuração de IDEs e editores
 .vscode/
+.idea/
+
+# Arquivos de Sistema Operacional
+.DS_Store
+Thumbs.db
+portfolio.csv
