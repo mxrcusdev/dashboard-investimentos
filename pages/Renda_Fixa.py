@@ -131,7 +131,7 @@ if submit_button:
     fig.add_trace(go.Scatter(x=months_axis, y=value_history, mode='lines+markers', name='Patrimônio'))
     fig.update_layout(title='Evolução do Investimento ao Longo do Tempo',
                       xaxis_title='Meses', yaxis_title='Valor (R$)')
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     st.warning(
         "**Atenção:** O resultado exibido é o **valor bruto**, antes da dedução do Imposto de Renda (IR). "

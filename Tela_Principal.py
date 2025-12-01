@@ -131,17 +131,17 @@ if not st.session_state.portfolio.empty:
             'Custo Total': format_currency,
             'Valor Atual': format_currency,
             'Lucro/Prejuízo': format_currency,
-        }), use_container_width=True)
+        }), width='stretch')
 
         # --- Gráficos de Alocação ---
         st.header("Alocação da Carteira")
         col_chart1, col_chart2 = st.columns(2)
         with col_chart1:
             fig_pie_asset = px.pie(processed_df, values='Valor Atual', names='Ativo', title='Distribuição por Ativo', hole=.3)
-            st.plotly_chart(fig_pie_asset, use_container_width=True)
+            st.plotly_chart(fig_pie_asset, width='stretch')
         with col_chart2:
             sector_agg = processed_df.groupby('Setor')['Valor Atual'].sum().reset_index()
             fig_pie_sector = px.pie(sector_agg, values='Valor Atual', names='Setor', title='Distribuição por Setor', hole=.3)
-            st.plotly_chart(fig_pie_sector, use_container_width=True)
+            st.plotly_chart(fig_pie_sector, width='stretch')
 else:
     st.info("Sua carteira está vazia. Adicione um ativo na barra lateral para começar.")

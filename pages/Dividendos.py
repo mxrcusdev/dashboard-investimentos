@@ -105,7 +105,7 @@ if not upcoming_dividends.empty:
     upcoming_dividends['Próxima Data Ex-Div'] = upcoming_dividends['Próxima Data Ex-Div'].dt.strftime('%d/%m/%Y')
     st.dataframe(
         upcoming_dividends[['Ativo', 'Próxima Data Ex-Div']].sort_values(by='Próxima Data Ex-Div').reset_index(drop=True),
-        use_container_width=True
+        width='stretch'
     )
 else:
     st.info("Nenhum dividendo futuro anunciado encontrado para os ativos da sua carteira no momento.")
@@ -121,7 +121,7 @@ fig = px.bar(
     text='Projeção Anual (R$)'
 )
 fig.update_traces(texttemplate='R$ %{text:.2f}', textposition='outside')
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')
 
 for index, row in div_df.sort_values(by='Projeção Anual (R$)', ascending=False).iterrows():
     header = f"**{row['Ativo']}** | Projeção Anual: {format_currency(row['Projeção Anual (R$)'])} | YOC: {row['Yield on Cost Projetado']:.2%} | DY Atual: {row['Dividend Yield (Atual)']:.2%}"

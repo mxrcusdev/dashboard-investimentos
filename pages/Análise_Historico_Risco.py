@@ -152,4 +152,4 @@ if not df_comparativo['Carteira'].eq(0).all():
     fig.add_trace(go.Scatter(x=desempenho_acumulado.index, y=desempenho_acumulado['Carteira'], mode='lines', name='Minha Carteira'))
 fig.add_trace(go.Scatter(x=desempenho_acumulado.index, y=desempenho_acumulado['IBOV'], mode='lines', name='IBOV', line=dict(dash='dot')))
 fig.update_layout(title='Desempenho Acumulado Normalizado', yaxis_title='Desempenho (Base 1)', xaxis_title='Data')
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')

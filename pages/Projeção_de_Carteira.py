@@ -141,7 +141,7 @@ if st.sidebar.button("Rodar Simulação de Monte Carlo"):
                 fiis_df = portfolio_df[portfolio_df['Ativo'].str.endswith('11')]
                 if not fiis_df.empty:
                     st.write("**FIIs na Carteira:**")
-                    st.dataframe(fiis_df[['Ativo', 'Quantidade']], hide_index=True, use_container_width=True)
+                    st.dataframe(fiis_df[['Ativo', 'Quantidade']], hide_index=True, width='stretch')
                 else:
                     st.info("Nenhum Fundo Imobiliário (FII) encontrado na sua carteira.")
             st.divider()
@@ -188,7 +188,7 @@ if st.sidebar.button("Rodar Simulação de Monte Carlo"):
             fig_hist.add_vline(x=p90, line_width=2, line_dash="dash", line_color="green", annotation_text="P90")
             fig_hist.update_layout(title_text=f'Distribuição dos Resultados Finais Após {projection_years_option} Anos',
                                    xaxis_title='Patrimônio Final Projetado (R$)', yaxis_title='Frequência')
-            st.plotly_chart(fig_hist, use_container_width=True)
+            st.plotly_chart(fig_hist, width='stretch')
 
             st.divider()
             st.header("Evolução do Patrimônio (Caminhos da Simulação)")
@@ -210,7 +210,7 @@ if st.sidebar.button("Rodar Simulação de Monte Carlo"):
                 yaxis_title='Patrimônio Projetado (R$)',
                 legend_title='Cenários'
             )
-            st.plotly_chart(fig_paths, use_container_width=True)
+            st.plotly_chart(fig_paths, width='stretch')
             st.info("Este gráfico mostra a evolução do caminho mediano (linha amarela) e a faixa de prováveis resultados (área sombreada entre os cenários pessimista e otimista) ao longo do tempo.")
             
             st.info(f"As premissas para a simulação foram um retorno médio diário de **{drift:.5f}** e uma volatilidade diária de **{volatility:.5f}**, calculados com base no histórico dos últimos 5 anos da sua carteira.")
