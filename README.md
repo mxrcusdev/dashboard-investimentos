@@ -57,7 +57,8 @@ Siga os passos abaixo para rodar o projeto no seu computador.
     ```
 
 O dashboard abrirá automaticamente no seu navegador.
-```Criador
-DC: mxrcus._
+
+## Criador
+```DC: mxrcus._```
 
 
